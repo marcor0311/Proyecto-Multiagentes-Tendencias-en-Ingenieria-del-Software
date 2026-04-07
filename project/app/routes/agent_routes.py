@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 from app.models.request_model import RequestModel
-from app.orchestrator.orchestrator import Orchestrator
+from app.services.agent_service import AgentService
 
 router = APIRouter()
-orchestrator = Orchestrator()
+agent_service = AgentService()
 
 @router.post("/agent")
 async def run_agent(data: RequestModel):
-    return await orchestrator.run(data.message)
+    return await agent_service.run(data.message)
