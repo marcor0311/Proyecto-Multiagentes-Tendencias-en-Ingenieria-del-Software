@@ -1,129 +1,96 @@
-from app.services.openai_service import ask_azure_openai
+from typing import Any, Dict, List
+
+from app.kernel.kernel import kernel
+
 
 class PlannerAgent:
+    FILE_MAP = {
+        "vpc": "network.tf",
+        "subnets": "network.tf",
+        "security_groups": "security.tf",
+        "ec2": "compute.tf",
+        "s3": "storage.tf",
+    }
+
+    async def run(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        project_name = request_data.get("project_name", "infra-project")
+        architecture = request_data.get("architecture", {})
+        resources = architecture.get("resources", [])
+        summary = self._build_summary(request_data)
+
+        kernel_trace = await kernel.invoke("planner", summary)
+
+        return {
+            "objective": f"Generar IaC Terraform para AWS del proyecto {project_name}.",
+            "task_type": "terraform_iac_generation",
+            "focus_areas": self._build_focus_areas(request_data),
+            "steps": self._build_steps(resources),
+            "expected_output": "Proyecto Terraform para AWS empaquetado en un archivo zip.",
+            "target_files": self._determine_files(resources),
+            "kernel_trace": kernel_trace,
+        }
 
     def process(self, message: str) -> str:
-        """
-        Procesa un mensaje usando Azure OpenAI.
-        Esta es la versión mínima para pruebas.
-        """
+        from app.services.openai_service import ask_azure_openai
+
         prompt = (
-            "Eres un modelo de lenguaje. A continuación te daré el nombre de un país y debes responder solamente con su capital. "
-            "No escribas explicaciones, no confirmes, no pongas texto adicional. "
-            f"País: {message}\nCapital:"
+            "Eres un agente planner para infraestructura como codigo en Terraform para AWS. "
+            "A partir de la solicitud del usuario, resume brevemente la infraestructura requerida, "
+            "identifica los recursos principales y responde en espanol de forma corta y estructurada.\n"
+            f"Solicitud: {message}"
         )
-        
-        # Llama al modelo de Azure OpenAI
-        response = ask_azure_openai(prompt)
+        return ask_azure_openai(prompt)
 
-        # Devolvemos el texto del modelo tal cual
-        return response
+    def _build_summary(self, request_data: Dict[str, Any]) -> str:
+        resources = request_data.get("architecture", {}).get("resources", [])
+        resources_text = ", ".join(resources) if resources else "sin recursos definidos"
+        return (
+            f"Proyecto {request_data.get('project_name', 'infra-project')} "
+            f"en {request_data.get('region', 'aws-region')} "
+            f"para ambiente {request_data.get('environment', 'dev')} "
+            f"con recursos: {resources_text}."
+        )
 
-# ---------------------------------------------------------
-# Esta es la versión para pruebitas
-# ---------------------------------------------------------
+    def _build_focus_areas(self, request_data: Dict[str, Any]) -> List[str]:
+        focus_areas = [
+            "Definir una estructura Terraform clara y modular.",
+            "Alinear los recursos solicitados con buenas practicas basicas de AWS.",
+        ]
 
-# import re
+        if request_data.get("network"):
+            focus_areas.append("Resolver correctamente la configuracion de red.")
+        if request_data.get("compute"):
+            focus_areas.append("Configurar recursos de computo y sus parametros clave.")
+        if request_data.get("storage", {}).get("create_s3_bucket"):
+            focus_areas.append("Preparar almacenamiento y convenciones de nombres para S3.")
 
-# from app.kernel.kernel import kernel
+        return focus_areas
 
+    def _build_steps(self, resources: List[str]) -> List[str]:
+        steps = [
+            "Analizar el JSON estructurado de entrada.",
+            "Identificar recursos AWS y dependencias entre ellos.",
+            "Determinar los archivos Terraform necesarios.",
+            "Recuperar contexto reutilizable para la generacion.",
+            "Generar contenido Terraform por archivo.",
+            "Validar cobertura y consistencia del proyecto.",
+            "Construir y empaquetar el proyecto final en un zip.",
+        ]
 
-# class PlannerAgent:
-#     TASK_PATTERNS = (
-#         ("comparative_analysis", {"comparar", "comparacion", "comparative", "versus", "vs"}),
-#         ("implementation_plan", {"implementar", "implementation", "integrar", "construir"}),
-#         ("trend_analysis", {"tendencia", "tendencias", "trend", "trends", "analiza", "analisis"}),
-#         ("recommendation", {"recomendar", "recomendacion", "sugerir", "mejor"}),
-#     )
+        if resources:
+            steps.append("Recursos objetivo: " + ", ".join(resources))
 
-#     PRIORITY_KEYWORDS = {
-#         "ai": "Evaluar oportunidades de automatizacion asistida por IA.",
-#         "devsecops": "Integrar seguridad dentro del ciclo de entrega.",
-#         "observabilidad": "Definir metricas y trazabilidad operativa.",
-#         "platform": "Mejorar la experiencia del desarrollador con capacidades internas.",
-#         "calidad": "Asegurar mecanismos de validacion temprana.",
-#         "pruebas": "Cubrir rutas criticas mediante automatizacion.",
-#     }
+        return steps
 
-#     async def run(self, input_text):
-#         normalized_text = self._normalize(input_text)
-#         tokens = normalized_text.split()
-#         task_type = self._detect_task_type(tokens)
-#         focus_areas = self._extract_focus_areas(tokens)
-#         steps = self._build_steps(task_type, focus_areas)
-#         kernel_trace = await kernel.invoke("planner", input_text)
+    def _determine_files(self, resources: List[str]) -> List[str]:
+        files = ["provider.tf", "variables.tf", "terraform.tfvars", "outputs.tf", "README.md"]
 
-#         return {
-#             "objective": input_text,
-#             "task_type": task_type,
-#             "focus_areas": focus_areas,
-#             "steps": steps,
-#             "expected_output": self._build_expected_output(task_type),
-#             "kernel_trace": kernel_trace,
-#         }
+        for resource in resources:
+            candidate = self.FILE_MAP.get(resource)
+            if candidate and candidate not in files:
+                files.append(candidate)
 
-#     def _normalize(self, text):
-#         normalized = re.sub(r"[^a-zA-Z0-9\s]", " ", text.lower())
-#         return re.sub(r"\s+", " ", normalized).strip()
+        if "main.tf" not in files:
+            files.append("main.tf")
 
-#     def _detect_task_type(self, tokens):
-#         token_set = set(tokens)
-
-#         for task_type, keywords in self.TASK_PATTERNS:
-#             if token_set.intersection(keywords):
-#                 return task_type
-
-#         return "general_analysis"
-
-#     def _extract_focus_areas(self, tokens):
-#         focus_areas = []
-#         token_set = set(tokens)
-
-#         for keyword, description in self.PRIORITY_KEYWORDS.items():
-#             if keyword in token_set:
-#                 focus_areas.append(description)
-
-#         if not focus_areas:
-#             focus_areas.append("Identificar tendencias y oportunidades relevantes para la solicitud.")
-
-#         return focus_areas[:4]
-
-#     def _build_steps(self, task_type, focus_areas):
-#         steps = [
-#             "Aclarar el objetivo principal de la solicitud.",
-#             "Identificar los temas o dominios mas relevantes.",
-#             "Recuperar contexto util para sustentar la respuesta.",
-#         ]
-
-#         if task_type == "comparative_analysis":
-#             steps.append("Comparar alternativas usando criterios consistentes.")
-#         elif task_type == "implementation_plan":
-#             steps.append("Traducir los hallazgos en un plan de implementacion incremental.")
-#         elif task_type == "recommendation":
-#             steps.append("Priorizar recomendaciones segun impacto y esfuerzo.")
-#         else:
-#             steps.append("Sintetizar las tendencias clave y su impacto esperado.")
-
-#         steps.append("Generar una respuesta clara para el usuario.")
-#         steps.extend(focus_areas)
-
-#         # Remove duplicates while preserving order.
-#         ordered_steps = []
-#         seen = set()
-#         for step in steps:
-#             if step not in seen:
-#                 ordered_steps.append(step)
-#                 seen.add(step)
-
-#         return ordered_steps
-
-#     def _build_expected_output(self, task_type):
-#         if task_type == "comparative_analysis":
-#             return "Comparacion estructurada con criterios, ventajas, riesgos y conclusion."
-#         if task_type == "implementation_plan":
-#             return "Plan por etapas con prioridades, dependencias y proximos pasos."
-#         if task_type == "recommendation":
-#             return "Lista priorizada de recomendaciones con justificacion."
-#         if task_type == "trend_analysis":
-#             return "Resumen de tendencias con implicaciones practicas."
-#         return "Respuesta sintetica, estructurada y accionable."
+        return files

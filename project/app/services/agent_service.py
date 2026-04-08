@@ -1,19 +1,12 @@
-from app.agents.planner_agent import PlannerAgent
+from typing import Any, Dict
+
+from app.orchestrator.orchestrator import Orchestrator
+
 
 class AgentService:
-    """
-    Servicio central que orquesta qué agente se usa
-    y devuelve una respuesta procesada.
-    """
 
     def __init__(self):
-        # Por ahora solo usamos un agente (Planner)
-        self.planner = PlannerAgent()
+        self.orchestrator = Orchestrator()
 
-    async def run(self, message: str) -> str:
-        """
-        Ejecuta el agente planner (por ahora)
-        y devuelve la respuesta generada por Azure OpenAI.
-        """
-        result = self.planner.process(message)
-        return result
+    async def run(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        return await self.orchestrator.run(request_data)
