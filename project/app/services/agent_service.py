@@ -1,18 +1,19 @@
-from app.orchestrator.orchestrator import Orchestrator
-from app.utils.logger import get_logger
-
+from app.agents.planner_agent import PlannerAgent
 
 class AgentService:
+    """
+    Servicio central que orquesta qué agente se usa
+    y devuelve una respuesta procesada.
+    """
 
     def __init__(self):
-        self.orchestrator = Orchestrator()
-        self.logger = get_logger("app.agent_service")
+        # Por ahora solo usamos un agente (Planner)
+        self.planner = PlannerAgent()
 
-    async def run(self, message: str):
-        self.logger.info("Inicio del flujo multiagente")
-        self.logger.info("Mensaje recibido: %s", message)
-
-        result = await self.orchestrator.run(message)
-
-        self.logger.info("Fin del flujo multiagente")
+    async def run(self, message: str) -> str:
+        """
+        Ejecuta el agente planner (por ahora)
+        y devuelve la respuesta generada por Azure OpenAI.
+        """
+        result = self.planner.process(message)
         return result
