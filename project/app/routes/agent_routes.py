@@ -7,4 +7,4 @@ agent_service = AgentService()
 
 @router.post("/agent")
 async def run_agent(data: RequestModel):
-    return await agent_service.run(data.message)
+    return await agent_service.run(data.dict())
