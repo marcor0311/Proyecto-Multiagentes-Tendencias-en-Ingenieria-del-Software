@@ -466,3 +466,23 @@ http://127.0.0.1:8000/docs
 ## Resumen
 
 El proyecto ya no es solo una demo de agentes conversacionales. Ahora es una base funcional para un sistema multiagente que recibe un JSON de infraestructura para AWS, genera archivos Terraform, los valida heurísticamente y los empaqueta en un archivo `.zip`.
+
+## Usando modules
+
+### S3 Bucket
+
+El módulo oficial para crear buckets en AWS S3 (`terraform-aws-modules/s3-bucket/aws`) incluye **más de 80 variables** posibles para configurar detalles como versioning, ACLs, políticas, cifrado, logging, CORS, lifecycle rules, replicación, entre muchas otras opciones avanzadas.
+
+```json
+{
+  "project_name": "demo-s3-module",
+  "cloud_provider": "aws",
+  "region": "us-east-1",
+  "environment": "dev",
+  "resources": [
+    {
+      "type": "s3",
+      "name": "tendencias-bucket"
+    }
+  ]
+}
