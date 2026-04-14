@@ -31,13 +31,13 @@ variable "attach_cloudtrail_log_delivery_policy" {
 variable "attach_deny_insecure_transport_policy" {
   description = "Controls if S3 bucket should have deny non-SSL transport policy attached"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "attach_require_latest_tls_policy" {
   description = "Controls if S3 bucket should require the latest version of TLS"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "attach_policy" {
@@ -67,7 +67,7 @@ variable "attach_analytics_destination_policy" {
 variable "attach_deny_incorrect_encryption_headers" {
   description = "Controls if S3 bucket should deny incorrect encryption headers policy attached."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "attach_deny_incorrect_kms_key_sse" {
@@ -85,7 +85,7 @@ variable "allowed_kms_key_arn" {
 variable "attach_deny_unencrypted_object_uploads" {
   description = "Controls if S3 bucket should deny unencrypted object uploads policy attached."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "attach_deny_ssec_encrypted_object_uploads" {
@@ -139,7 +139,14 @@ variable "policy" {
 variable "tags" {
   description = "(Optional) A mapping of tags to assign to the bucket."
   type        = map(string)
-  default     = {}
+  default     = {
+    company             = "globomantics"
+    business_unit       = "global-platform"
+    cost_center         = "corp-it"
+    data_classification = "internal"
+    managed_by          = "multiagent-platform"
+    compliance_profile  = "corporate-baseline"
+  }
 }
 
 variable "force_destroy" {
@@ -175,7 +182,9 @@ variable "cors_rule" {
 variable "versioning" {
   description = "Map containing versioning configuration."
   type        = map(string)
-  default     = {}
+  default     = {
+    enabled = "true"
+  }
 }
 
 variable "logging" {
@@ -247,7 +256,14 @@ variable "replication_configuration" {
 variable "server_side_encryption_configuration" {
   description = "Map containing server-side encryption configuration."
   type        = any
-  default     = {}
+  default     = {
+    rule = {
+      bucket_key_enabled = true
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
 }
 
 variable "intelligent_tiering" {
@@ -355,7 +371,7 @@ variable "restrict_public_buckets" {
 variable "control_object_ownership" {
   description = "Whether to manage S3 Bucket Ownership Controls on this bucket."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "object_ownership" {

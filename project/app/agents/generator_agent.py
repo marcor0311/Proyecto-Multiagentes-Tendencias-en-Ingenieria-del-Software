@@ -59,11 +59,11 @@ class GeneratorAgent:
     def _provider_tf(self) -> str:
         return (
             'terraform {\n'
-            '  required_version = ">= 1.5.0"\n'
+            '  required_version = ">= 1.5.7"\n'
             '  required_providers {\n'
             '    aws = {\n'
             '      source  = "hashicorp/aws"\n'
-            '      version = "~> 5.0"\n'
+            '      version = ">= 6.39"\n'
             '    }\n'
             '  }\n'
             '}\n\n'
@@ -202,8 +202,10 @@ class GeneratorAgent:
 
     def _storage_tf(self) -> str:
         return (
-            'resource "aws_s3_bucket" "artifacts" {\n'
+            'module "s3_bucket" {\n'
+            '  source = "./modules/aws/s3-bucket"\n\n'
             '  bucket = var.s3_bucket_name\n'
+            '  region = var.region\n'
             '}\n'
         )
 
@@ -214,7 +216,8 @@ class GeneratorAgent:
         if "ec2" in resources:
             outputs.append('output "instance_ids" { value = aws_instance.app[*].id }')
         if "s3" in resources:
-            outputs.append('output "bucket_name" { value = aws_s3_bucket.artifacts.bucket }')
+            outputs.append('output "bucket_name" { value = module.s3_bucket.s3_bucket_id }')
+            outputs.append('output "bucket_arn" { value = module.s3_bucket.s3_bucket_arn }')
         return "\n\n".join(outputs) + "\n"
 
     def _readme(
@@ -230,6 +233,8 @@ class GeneratorAgent:
             "Proyecto Terraform generado por el sistema multiagente.\n\n"
             f"## Region\n{request_data.get('region', 'us-east-1')}\n\n"
             f"## Recursos\n{', '.join(request_data.get('architecture', {}).get('resources', []))}\n\n"
+            "## Implementacion\n"
+            "Para S3 se utiliza un modulo local con configuracion corporativa predefinida.\n\n"
             f"## Plan\n{steps}\n\n"
             f"## Pistas de validacion\n{hints}\n"
         )
