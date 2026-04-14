@@ -74,51 +74,52 @@ Limitaciones actuales:
 
 ## Modelo de entrada
 
-El request actual espera un JSON estructurado como este:
+El backend acepta un unico formato de entrada: el payload que hoy envia el frontend en `PSWE-01`.
+
+Request esperado:
 
 ```json
 {
-  "project_name": "infra-web-demo",
+  "project_name": "demo-s3-module",
   "cloud_provider": "aws",
   "region": "us-east-1",
   "environment": "dev",
-  "architecture": {
-    "type": "web_app",
-    "resources": [
-      "vpc",
-      "subnets",
-      "security_groups",
-      "ec2",
-      "s3"
-    ]
-  },
-  "network": {
-    "vpc_cidr": "10.0.0.0/16",
-    "public_subnets": [
-      "10.0.1.0/24",
-      "10.0.2.0/24"
-    ],
-    "private_subnets": [
-      "10.0.11.0/24",
-      "10.0.12.0/24"
-    ]
-  },
-  "compute": {
-    "ec2_instance_type": "t3.micro",
-    "ec2_count": 1,
-    "ami_id": "ami-xxxxxxxx"
-  },
-  "storage": {
-    "create_s3_bucket": true,
-    "s3_bucket_name": "infra-web-demo-dev-bucket"
-  },
-  "tags": {
-    "owner": "equipo-arquitectura",
-    "course": "PSWE-01",
-    "environment": "dev"
-  }
+  "resources": [
+    {
+      "type": "s3",
+      "name": "tendencias-bucket"
+    }
+  ]
 }
 ```
+
+## Como validar con Terraform desde consola
+
+Desde la carpeta del proyecto generado:
+
+```bash
+cd project/generated/demo-s3-module
+terraform init
+terraform fmt -check
+terraform validate
+```
+
+Si quieres probar el plan:
+
+```bash
+terraform plan
+```
+
+Si `terraform plan` falla con credenciales de AWS, eso no significa necesariamente que el proyecto este mal.
+Solo significa que Terraform no encontro acceso configurado a AWS.
+```
+
+Internamente el sistema multiagente deriva a partir de `resources`:
+
+- `architecture.resources` a partir de los `type`.
+- `architecture.type` segun los recursos seleccionados.
+- `storage` cuando existe un recurso `s3`.
+- `compute` cuando existen recursos `ec2`.
 
 ## Archivos Terraform generados
 
@@ -159,45 +160,16 @@ Procesa la solicitud IaC y devuelve el estado completo del workflow.
 
 ```json
 {
-  "project_name": "infra-web-demo",
+  "project_name": "demo-s3-module",
   "cloud_provider": "aws",
   "region": "us-east-1",
   "environment": "dev",
-  "architecture": {
-    "type": "web_app",
-    "resources": [
-      "vpc",
-      "subnets",
-      "security_groups",
-      "ec2",
-      "s3"
-    ]
-  },
-  "network": {
-    "vpc_cidr": "10.0.0.0/16",
-    "public_subnets": [
-      "10.0.1.0/24",
-      "10.0.2.0/24"
-    ],
-    "private_subnets": [
-      "10.0.11.0/24",
-      "10.0.12.0/24"
-    ]
-  },
-  "compute": {
-    "ec2_instance_type": "t3.micro",
-    "ec2_count": 1,
-    "ami_id": "ami-xxxxxxxx"
-  },
-  "storage": {
-    "create_s3_bucket": true,
-    "s3_bucket_name": "infra-web-demo-dev-bucket"
-  },
-  "tags": {
-    "owner": "equipo-arquitectura",
-    "course": "PSWE-01",
-    "environment": "dev"
-  }
+  "resources": [
+    {
+      "type": "s3",
+      "name": "tendencias-bucket"
+    }
+  ]
 }
 ```
 
@@ -206,191 +178,43 @@ Procesa la solicitud IaC y devuelve el estado completo del workflow.
 ```json
 {
   "input": {
-    "project_name": "infra-web-demo",
+    "project_name": "demo-s3-module",
     "cloud_provider": "aws",
     "region": "us-east-1",
     "environment": "dev",
     "architecture": {
-      "type": "web_app",
+      "type": "static_site",
       "resources": [
-        "vpc",
-        "subnets",
-        "security_groups",
-        "ec2",
         "s3"
       ]
     },
-    "network": {
-      "vpc_cidr": "10.0.0.0/16",
-      "public_subnets": [
-        "10.0.1.0/24",
-        "10.0.2.0/24"
-      ],
-      "private_subnets": [
-        "10.0.11.0/24",
-        "10.0.12.0/24"
-      ]
-    },
-    "compute": {
-      "ec2_instance_type": "t3.micro",
-      "ec2_count": 1,
-      "ami_id": "ami-xxxxxxxx"
-    },
+    "resources": [
+      {
+        "type": "s3",
+        "name": "tendencias-bucket"
+      }
+    ],
+    "network": null,
+    "compute": null,
     "storage": {
       "create_s3_bucket": true,
-      "s3_bucket_name": "infra-web-demo-dev-bucket"
+      "s3_bucket_name": "tendencias-bucket"
     },
-    "tags": {
-      "owner": "equipo-arquitectura",
-      "course": "PSWE-01",
-      "environment": "dev"
-    }
+    "tags": {}
   },
   "plan": {
-    "objective": "Generar IaC Terraform para AWS del proyecto infra-web-demo.",
+    "objective": "Generar IaC Terraform para AWS del proyecto demo-s3-module.",
     "task_type": "terraform_iac_generation",
     "focus_areas": [
       "Definir una estructura Terraform clara y modular.",
       "Alinear los recursos solicitados con buenas practicas basicas de AWS.",
-      "Resolver correctamente la configuracion de red.",
-      "Configurar recursos de computo y sus parametros clave.",
       "Preparar almacenamiento y convenciones de nombres para S3."
     ],
     "steps": [
       "Analizar el JSON estructurado de entrada.",
       "Identificar recursos AWS y dependencias entre ellos.",
-      "Determinar los archivos Terraform necesarios.",
-      "Recuperar contexto reutilizable para la generacion.",
-      "Generar contenido Terraform por archivo.",
-      "Validar cobertura y consistencia del proyecto.",
-      "Construir y empaquetar el proyecto final en un zip.",
-      "Recursos objetivo: vpc, subnets, security_groups, ec2, s3"
-    ],
-    "expected_output": "Proyecto Terraform para AWS empaquetado en un archivo zip.",
-    "target_files": [
-      "provider.tf",
-      "variables.tf",
-      "terraform.tfvars",
-      "outputs.tf",
-      "README.md",
-      "network.tf",
-      "security.tf",
-      "compute.tf",
-      "storage.tf",
-      "main.tf"
-    ],
-    "kernel_trace": "[planner] proceso: Proyecto infra-web-demo en us-east-1 para ambiente dev con recursos: vpc, subnets, security_groups, ec2, s3."
-  },
-  "retrieval": {
-    "cloud_provider": "aws",
-    "architecture_type": "web_app",
-    "requested_resources": [
-      "vpc",
-      "subnets",
-      "security_groups",
-      "ec2",
-      "s3"
-    ],
-    "resource_context": [
-      {
-        "resource": "vpc",
-        "target_file": "network.tf",
-        "summary": "Define la red principal donde se desplegaran los recursos.",
-        "dependencies": [],
-        "validation_hints": [
-          "Verificar que el CIDR de la VPC exista.",
-          "Revisar que la VPC tenga tags coherentes."
-        ]
-      }
-    ],
-    "required_files": [
-      "README.md",
-      "compute.tf",
-      "main.tf",
-      "network.tf",
-      "outputs.tf",
-      "provider.tf",
-      "security.tf",
-      "storage.tf",
-      "terraform.tfvars",
-      "variables.tf"
-    ],
-    "validation_hints": [
-      "Verificar que el CIDR de la VPC exista.",
-      "Revisar que la VPC tenga tags coherentes."
-    ],
-    "retrieval_summary": "Para el proyecto infra-web-demo se identificaron recursos Terraform AWS: vpc, subnets, security_groups, ec2, s3. Los archivos sugeridos son: README.md, compute.tf, main.tf, network.tf, outputs.tf, provider.tf, security.tf, storage.tf, terraform.tfvars, variables.tf."
-  },
-  "generation": {
-    "summary": "Se generaron archivos Terraform para el proyecto infra-web-demo con foco en vpc, subnets, security_groups, ec2, s3.",
-    "key_points": [
-      "El proyecto se genera para AWS con archivos Terraform separados por responsabilidad.",
-      "La estructura considera provider, variables, tfvars, outputs y archivos por dominio.",
-      "El contenido puede servir como base para refinar con modelos o plantillas mas avanzadas."
-    ],
-    "recommended_actions": [
-      "Ejecutar terraform fmt sobre los archivos generados.",
-      "Ejecutar terraform validate antes de aplicar.",
-      "Revisar manualmente reglas de seguridad y nombres finales."
-    ],
-    "terraform_files": {
-      "provider.tf": "terraform { ... }",
-      "variables.tf": "variable \"project_name\" { ... }",
-      "terraform.tfvars": "project_name = \"infra-web-demo\"",
-      "main.tf": "# Terraform base para el proyecto ...",
-      "network.tf": "resource \"aws_vpc\" \"main\" { ... }",
-      "security.tf": "resource \"aws_security_group\" \"app\" { ... }",
-      "compute.tf": "resource \"aws_instance\" \"app\" { ... }",
-      "storage.tf": "resource \"aws_s3_bucket\" \"artifacts\" { ... }",
-      "outputs.tf": "output \"project_name\" { ... }",
-      "README.md": "# infra-web-demo"
-    },
-    "file_notes": [
-      {
-        "file": "provider.tf",
-        "line_count": 12
-      },
-      {
-        "file": "network.tf",
-        "line_count": 25
-      }
-    ],
-    "draft_response": "Proyecto infra-web-demo listo para construccion. Se prepararon 10 archivos Terraform para AWS. Recursos cubiertos: vpc, subnets, security_groups, ec2, s3."
-  },
-  "validation": {
-    "status": "approved",
-    "score": 100,
-    "strengths": [
-      "El plan define etapas para generar y empaquetar IaC.",
-      "La recuperacion identifica recursos AWS, archivos objetivo y dependencias.",
-      "GeneratorAgent produjo archivos Terraform listos para construccion.",
-      "La cobertura de archivos y recursos es consistente con la solicitud."
-    ],
-    "issues": [],
-    "suggestions": [
-      "Ejecutar terraform fmt y terraform validate sobre el zip generado."
-    ],
-    "missing_files": [],
-    "missing_resource_coverage": [],
-    "kernel_trace": "[evaluator] proceso: terraform-validation"
-  },
-  "build": {
-    "project_name": "infra-web-demo",
-    "output_dir": "project/generated/infra-web-demo",
-    "zip_path": "project/generated/infra-web-demo.zip",
-    "files_created": [
-      "provider.tf",
-      "variables.tf",
-      "terraform.tfvars",
-      "outputs.tf",
-      "README.md",
-      "main.tf",
-      "network.tf",
-      "security.tf",
-      "compute.tf",
-      "storage.tf"
-    ],
-    "status": "success"
+      "Determinar los archivos Terraform necesarios."
+    ]
   }
 }
 ```
@@ -438,8 +262,9 @@ Dependencias actuales:
 Desde la carpeta `project`:
 
 ```bash
+source venv/bin/activate
 pip install -r app/requirements.txt
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 La API deberia quedar disponible en:
@@ -453,15 +278,6 @@ La documentacion interactiva estara en:
 ```text
 http://127.0.0.1:8000/docs
 ```
-
-## Proximos pasos sugeridos
-
-1. Reemplazar el `MockKernel` por una integracion real entre agentes y LLM.
-2. Integrar validacion automatica con `terraform fmt` y `terraform validate`.
-3. Hacer iterativo el flujo entre `EvaluatorAgent` y `GeneratorAgent`.
-4. Mejorar plantillas Terraform para mas tipos de arquitectura y recursos.
-5. Formalizar modelos de respuesta con Pydantic.
-6. Agregar pruebas automatizadas del endpoint y del workflow multiagente.
 
 ## Resumen
 

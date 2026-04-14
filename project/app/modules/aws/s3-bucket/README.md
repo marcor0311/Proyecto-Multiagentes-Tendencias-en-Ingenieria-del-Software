@@ -2,6 +2,32 @@
 
 Terraform module which creates S3 bucket on AWS with all (or almost all) features provided by Terraform AWS provider.
 
+## Corporate baseline for this project
+
+In this repository this module is treated as a business-ready S3 blueprint for a multinational environment.
+The generator is expected to provide only the bucket name, while the rest of the configuration is intentionally preconfigured here to simulate internal platform standards.
+
+Default business baseline applied in this repo:
+
+- Block public access enabled.
+- Bucket owner enforced ownership controls.
+- Versioning enabled.
+- Server-side encryption enabled with `AES256`.
+- Deny insecure transport.
+- Require modern TLS.
+- Deny unencrypted object uploads.
+- Deny incorrect encryption headers.
+- Default corporate tags applied automatically.
+
+Minimal usage expected by the generator:
+
+```hcl
+module "s3_bucket" {
+  source = "./modules/aws/s3-bucket"
+  bucket = "tendencias-bucket"
+}
+```
+
 [![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
 
 These features of S3 bucket configurations are supported:

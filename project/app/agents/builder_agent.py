@@ -1,4 +1,5 @@
 from pathlib import Path
+from shutil import copytree
 from typing import Any, Dict
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -22,15 +23,19 @@ class BuilderAgent:
         for file_name, content in files.items():
             (project_dir / file_name).write_text(content, encoding="utf-8")
 
+        copied_assets = self._copy_supporting_modules(project_dir, request_data)
+
         with ZipFile(zip_path, "w", compression=ZIP_DEFLATED) as archive:
-            for file_name in files:
-                archive.write(project_dir / file_name, arcname=file_name)
+            for file_path in sorted(project_dir.rglob("*")):
+                if file_path.is_file():
+                    archive.write(file_path, arcname=str(file_path.relative_to(project_dir)))
 
         return {
             "project_name": project_name,
             "output_dir": str(project_dir),
             "zip_path": str(zip_path),
             "files_created": list(files.keys()),
+            "copied_assets": copied_assets,
             "status": "success",
         }
 
@@ -64,11 +69,11 @@ class BuilderAgent:
     def _provider_tf(self, request_data: Dict[str, Any]) -> str:
         return (
             'terraform {\n'
-            '  required_version = ">= 1.5.0"\n'
+            '  required_version = ">= 1.5.7"\n'
             '  required_providers {\n'
             '    aws = {\n'
             '      source  = "hashicorp/aws"\n'
-            '      version = "~> 5.0"\n'
+            '      version = ">= 6.39"\n'
             '    }\n'
             '  }\n'
             '}\n\n'
@@ -178,11 +183,10 @@ class BuilderAgent:
 
     def _storage_tf(self, request_data: Dict[str, Any]) -> str:
         return (
-            'resource "aws_s3_bucket" "artifacts" {\n'
-            '  bucket = var.s3_bucket_name\n\n'
-            '  tags = {\n'
-            '    Name = "${var.project_name}-${var.environment}-bucket"\n'
-            '  }\n'
+            'module "s3_bucket" {\n'
+            '  source = "./modules/aws/s3-bucket"\n\n'
+            '  bucket = var.s3_bucket_name\n'
+            '  region = var.region\n'
             '}\n'
         )
 
@@ -193,7 +197,8 @@ class BuilderAgent:
         if "ec2" in resources:
             blocks.append('output "instance_ids" { value = aws_instance.app[*].id }')
         if "s3" in resources:
-            blocks.append('output "s3_bucket_name" { value = aws_s3_bucket.artifacts.bucket }')
+            blocks.append('output "s3_bucket_name" { value = module.s3_bucket.s3_bucket_id }')
+            blocks.append('output "s3_bucket_arn" { value = module.s3_bucket.s3_bucket_arn }')
         return "\n\n".join(blocks) + "\n"
 
     def _project_readme(
@@ -209,6 +214,8 @@ class BuilderAgent:
             "Proyecto Terraform generado por el sistema multiagente.\n\n"
             f"## Region\n{request_data.get('region', 'us-east-1')}\n\n"
             f"## Recursos solicitados\n{resources}\n\n"
+            "## Implementacion\n"
+            "El recurso S3 se arma mediante un modulo local incluido en este proyecto generado.\n\n"
             f"## Plan del PlannerAgent\n{steps}\n\n"
             "## Borrador del GeneratorAgent\n"
             f"{generation.get('draft_response', 'Sin borrador disponible.')}\n"
@@ -216,3 +223,16 @@ class BuilderAgent:
 
     def _sanitize_name(self, name: str) -> str:
         return "".join(char if char.isalnum() or char in ("-", "_") else "-" for char in name)
+
+    def _copy_supporting_modules(self, project_dir: Path, request_data: Dict[str, Any]) -> list[str]:
+        resources = request_data.get("architecture", {}).get("resources", [])
+        copied_assets: list[str] = []
+
+        if "s3" in resources:
+            source_dir = Path(__file__).resolve().parents[1] / "modules" / "aws" / "s3-bucket"
+            target_dir = project_dir / "modules" / "aws" / "s3-bucket"
+            target_dir.parent.mkdir(parents=True, exist_ok=True)
+            copytree(source_dir, target_dir, dirs_exist_ok=True)
+            copied_assets.append(str(target_dir.relative_to(project_dir)))
+
+        return copied_assets
