@@ -1,5 +1,4 @@
 from app.agents.planner_agent import PlannerAgent
-from app.agents.evaluator_agent import EvaluatorAgent
 from app.agents.generator_agent import GeneratorAgent
 from app.agents.retriever_agent import RetrieverAgent
 from app.agents.builder_agent import BuilderAgent
@@ -10,21 +9,12 @@ class Orchestrator:
         self.planner = PlannerAgent()
         self.retriever = RetrieverAgent()
         self.generator = GeneratorAgent()
-        self.evaluator = EvaluatorAgent()
         self.builder = BuilderAgent()
 
     async def run(self, request_data):
         plan = await self.planner.run(request_data)
         retrieval = await self.retriever.run(request_data, plan)
         generation = await self.generator.run(request_data, plan, retrieval)
-        validation = await self.evaluator.run(
-            {
-                "input": request_data,
-                "plan": plan,
-                "retrieval": retrieval,
-                "generation": generation,
-            }
-        )
         build = await self.builder.run(request_data, plan, generation)
 
         return {
@@ -32,6 +22,5 @@ class Orchestrator:
             "plan": plan,
             "retrieval": retrieval,
             "generation": generation,
-            "validation": validation,
             "build": build,
         }

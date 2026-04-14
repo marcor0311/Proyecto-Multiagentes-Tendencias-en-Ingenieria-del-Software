@@ -10,7 +10,7 @@ import type { IaCFormData } from './types/iac';
 function App() {
   const { createEmptyResource, initialValues, resourceTypeOptions, validationSchema } =
     useIacFormConfig();
-  const { isSubmitting, responseData, submitError, submitPayload } = useAgentRequest();
+  const { activityLogs, isSubmitting, responseData, submitError, submitPayload } = useAgentRequest();
 
   return (
     <Formik<IaCFormData>
@@ -53,6 +53,7 @@ function App() {
                             resourceTypeOptions={resourceTypeOptions}
                             responseData={responseData}
                             submitError={submitError}
+                            activityLogs={activityLogs}
                           />
                         </Col>
                       </Row>

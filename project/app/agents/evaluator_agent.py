@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 
 from app.kernel.kernel import kernel
+from app.services.openai_service import safe_ask_azure_openai
 
 
 class EvaluatorAgent:
@@ -87,6 +88,13 @@ class EvaluatorAgent:
         if not suggestions:
             suggestions.append("Ejecutar terraform fmt y terraform validate sobre el zip generado.")
 
+        llm_evaluation_summary = self._generate_llm_summary(
+            request_data,
+            missing_files,
+            missing_resource_coverage,
+            score,
+        )
+
         return {
             "status": self._determine_status(score, missing_files, missing_resource_coverage),
             "score": score,
@@ -95,6 +103,7 @@ class EvaluatorAgent:
             "suggestions": suggestions,
             "missing_files": missing_files,
             "missing_resource_coverage": missing_resource_coverage,
+            "llm_evaluation_summary": llm_evaluation_summary,
             "kernel_trace": kernel_trace,
         }
 
@@ -118,3 +127,21 @@ class EvaluatorAgent:
         if score >= 60:
             return "needs_minor_improvements"
         return "needs_revision"
+
+    def _generate_llm_summary(
+        self,
+        request_data: Dict[str, Any],
+        missing_files: List[str],
+        missing_resource_coverage: List[str],
+        score: int,
+    ) -> str | None:
+        prompt = (
+            "Eres un evaluator agent para Terraform AWS. "
+            "Resume el estado del proyecto y las revisiones mas importantes. "
+            "Responde en espanol, maximo 5 lineas.\n"
+            f"Proyecto: {request_data.get('project_name', 'infra-project')}\n"
+            f"Score: {score}\n"
+            f"Missing files: {', '.join(missing_files) or 'ninguno'}\n"
+            f"Missing coverage: {', '.join(missing_resource_coverage) or 'ninguna'}"
+        )
+        return safe_ask_azure_openai(prompt, max_completion_tokens=180)

@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 
+from app.services.openai_service import safe_ask_azure_openai
 
 class GeneratorAgent:
 
@@ -11,6 +12,7 @@ class GeneratorAgent:
     ) -> Dict[str, Any]:
         files = self._build_files(request_data, plan, retrieval_result)
         file_notes = self._build_file_notes(files)
+        llm_generation_notes = self._generate_llm_notes(request_data, retrieval_result, files)
 
         return {
             "summary": self._build_summary(request_data, retrieval_result),
@@ -27,6 +29,7 @@ class GeneratorAgent:
             "terraform_files": files,
             "file_notes": file_notes,
             "draft_response": self._build_draft_response(request_data, retrieval_result, files),
+            "llm_generation_notes": llm_generation_notes,
         }
 
     def _build_files(
@@ -257,8 +260,34 @@ class GeneratorAgent:
         retrieval_result: Dict[str, Any],
         files: Dict[str, str],
     ) -> str:
-        return (
+        deterministic_response = (
             f"Proyecto {request_data.get('project_name', 'infra-project')} listo para construccion. "
             f"Se prepararon {len(files)} archivos Terraform para AWS. "
             f"Recursos cubiertos: {', '.join(retrieval_result.get('requested_resources', []))}."
         )
+        llm_response = safe_ask_azure_openai(
+            (
+                "Eres un generator agent para Terraform AWS. "
+                "Redacta un mensaje corto de salida para el usuario describiendo que se genero y que debe validar. "
+                "Responde en espanol y no mas de 4 lineas.\n"
+                f"Base: {deterministic_response}"
+            ),
+            max_completion_tokens=180,
+        )
+        return llm_response or deterministic_response
+
+    def _generate_llm_notes(
+        self,
+        request_data: Dict[str, Any],
+        retrieval_result: Dict[str, Any],
+        files: Dict[str, str],
+    ) -> str | None:
+        prompt = (
+            "Eres un generator agent para Terraform AWS. "
+            "Explica brevemente como quedo la generacion, incluyendo modulos locales si existen, y que revisar antes de aplicar. "
+            "Responde en espanol en maximo 6 lineas.\n"
+            f"Proyecto: {request_data.get('project_name', 'infra-project')}\n"
+            f"Recursos: {', '.join(retrieval_result.get('requested_resources', []))}\n"
+            f"Archivos generados: {', '.join(files.keys())}"
+        )
+        return safe_ask_azure_openai(prompt, max_completion_tokens=220)

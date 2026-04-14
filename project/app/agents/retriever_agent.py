@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 
+from app.services.openai_service import safe_ask_azure_openai
 
 class RetrieverAgent:
     RESOURCE_CATALOG = {
@@ -78,6 +79,7 @@ class RetrieverAgent:
             )
 
         retrieval_summary = self._build_summary(request_data, resource_context, required_files)
+        llm_retrieval_guidance = self._generate_llm_guidance(request_data, resource_context, required_files)
 
         return {
             "cloud_provider": request_data.get("cloud_provider", "aws"),
@@ -87,6 +89,7 @@ class RetrieverAgent:
             "required_files": sorted(required_files),
             "validation_hints": self._dedupe(validation_hints),
             "retrieval_summary": retrieval_summary,
+            "llm_retrieval_guidance": llm_retrieval_guidance,
         }
 
     def _build_summary(
@@ -111,3 +114,21 @@ class RetrieverAgent:
                 ordered.append(item)
                 seen.add(item)
         return ordered
+
+    def _generate_llm_guidance(
+        self,
+        request_data: Dict[str, Any],
+        resource_context: List[Dict[str, Any]],
+        required_files,
+    ) -> str | None:
+        resources = ", ".join(item["resource"] for item in resource_context) or "sin recursos"
+        files = ", ".join(sorted(required_files)) or "sin archivos"
+        prompt = (
+            "Eres un retriever agent para Terraform AWS. "
+            "Explica brevemente que artefactos Terraform deben generarse y que dependencias son clave. "
+            "Responde en espanol y en maximo 6 lineas.\n"
+            f"Proyecto: {request_data.get('project_name', 'infra-project')}\n"
+            f"Recursos: {resources}\n"
+            f"Archivos: {files}"
+        )
+        return safe_ask_azure_openai(prompt, max_completion_tokens=220)
