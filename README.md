@@ -62,6 +62,12 @@ Los proyectos generados se escriben en:
 
 - `project/generated/`
 
+## Usando modules
+
+### S3 Bucket
+
+El módulo oficial para crear buckets en AWS S3 (`terraform-aws-modules/s3-bucket/aws`) incluye **más de 80 variables** posibles para configurar detalles como versioning, ACLs, políticas, cifrado, logging, CORS, lifecycle rules, replicación, entre muchas otras opciones avanzadas.
+
 ## API
 
 ### `GET /`
