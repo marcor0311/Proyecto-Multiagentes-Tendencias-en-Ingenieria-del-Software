@@ -496,6 +496,18 @@
   word-break: break-word;
 }
 
+.logBlock {
+  margin: 0 0 0.55rem;
+  overflow: visible;
+  padding: 0;
+  background: transparent;
+  color: #111111;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .formFooter {
   margin-top: 0.15rem;
 }

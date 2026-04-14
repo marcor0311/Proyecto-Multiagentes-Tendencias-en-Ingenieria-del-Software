@@ -10,6 +10,7 @@ type PayloadFormProps = {
   resourceTypeOptions: ResourceTypeOption[];
   responseData: Record<string, unknown> | null;
   submitError: string | null;
+  activityLogs: string[];
 };
 
 function PayloadForm({
@@ -18,7 +19,8 @@ function PayloadForm({
   isSubmitting,
   resourceTypeOptions,
   responseData,
-  submitError
+  submitError,
+  activityLogs
 }: PayloadFormProps) {
   const { values, errors, touched, handleChange, handleBlur, handleSubmit } = formik;
   const resourcesError =
@@ -240,7 +242,18 @@ function PayloadForm({
               <span className={styles.previewDot} />
               <p>Response preview</p>
             </div>
+            {activityLogs.length > 0 ? (
+              <pre className={styles.logBlock}>{activityLogs.join('\n')}</pre>
+            ) : null}
             <pre className={styles.codeBlock}>{responsePreview}</pre>
+          </div>
+        ) : activityLogs.length > 0 ? (
+          <div className={styles.responseCard}>
+            <div className={styles.previewHeader}>
+              <span className={styles.previewDot} />
+              <p>Activity log</p>
+            </div>
+            <pre className={styles.logBlock}>{activityLogs.join('\n')}</pre>
           </div>
         ) : null}
       </Form>

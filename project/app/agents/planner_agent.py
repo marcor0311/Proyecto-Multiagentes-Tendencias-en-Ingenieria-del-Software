@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 
 from app.kernel.kernel import kernel
+from app.services.openai_service import safe_ask_azure_openai
 
 
 class PlannerAgent:
@@ -19,6 +20,7 @@ class PlannerAgent:
         summary = self._build_summary(request_data)
 
         kernel_trace = await kernel.invoke("planner", summary)
+        llm_plan = self._generate_llm_plan(summary)
 
         return {
             "objective": f"Generar IaC Terraform para AWS del proyecto {project_name}.",
@@ -27,6 +29,7 @@ class PlannerAgent:
             "steps": self._build_steps(resources),
             "expected_output": "Proyecto Terraform para AWS empaquetado en un archivo zip.",
             "target_files": self._determine_files(resources),
+            "llm_plan": llm_plan,
             "kernel_trace": kernel_trace,
         }
 
@@ -94,3 +97,11 @@ class PlannerAgent:
             files.append("main.tf")
 
         return files
+
+    def _generate_llm_plan(self, summary: str) -> str | None:
+        prompt = (
+            "Resume el plan de infraestructura como un planner multiagente para Terraform en AWS. "
+            "Responde en espanol, en maximo 5 lineas, con foco en arquitectura, riesgos y resultado esperado.\n"
+            f"Solicitud: {summary}"
+        )
+        return safe_ask_azure_openai(prompt, max_completion_tokens=220)

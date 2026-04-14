@@ -6,3 +6,6 @@ __pycache__/
 *.tfstate.*
 project/generated/
 *.zip
+project/.env
+PSWE-01/.env
+.env

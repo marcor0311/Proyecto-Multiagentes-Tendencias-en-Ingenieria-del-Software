@@ -36,6 +36,7 @@ class BuilderAgent:
             "zip_path": str(zip_path),
             "files_created": list(files.keys()),
             "copied_assets": copied_assets,
+            "download_url": f"/api/agent/download/{project_name}",
             "status": "success",
         }
 
